@@ -272,6 +272,39 @@ app.get('/debug/ftp-ls', async (req, res) => {
   }
 });
 
+app.get('/debug/whereami', async (req, res) => {
+  let client;
+  try {
+    client = await getFtpClient();
+    const pwd = await client.pwd(); // diretório atual após login
+
+    async function safeList(dir) {
+      try {
+        const items = await client.list(dir);
+        return items.map(i => ({ name: i.name, type: i.isDirectory ? 'dir' : 'file' }));
+      } catch (e) {
+        return `ERR: ${e.code || e.message}`;
+      }
+    }
+
+    const tries = {
+      '.': await safeList('.'),
+      '/': await safeList('/'),
+      'public_html': await safeList('public_html'),
+      'www': await safeList('www'),
+      'imoveis': await safeList('imoveis'),
+      'public_html/imoveis': await safeList('public_html/imoveis'),
+      'www/imoveis': await safeList('www/imoveis'),
+    };
+
+    res.json({ pwd, tries });
+  } catch (e) {
+    res.status(500).json({ error: e?.message });
+  } finally {
+    if (client) client.close();
+  }
+});
+
 // Tenta baixar o REMOTE_DB e mostra infos do arquivo
 app.get('/debug/db', async (req, res) => {
   let client;
