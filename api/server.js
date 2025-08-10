@@ -272,6 +272,26 @@ app.get('/debug/ftp-ls', async (req, res) => {
   }
 });
 
+app.get('/debug/drop-here', async (req, res) => {
+  let client;
+  const localTmp = '/tmp/whereami.txt';
+  try {
+    // cria um arquivo local com timestamp
+    fs.writeFileSync(localTmp, `hello from API @ ${new Date().toISOString()}\n`, 'utf8');
+
+    client = await getFtpClient();
+    // sobe no diretório atual do login
+    await client.uploadFrom(localTmp, 'whereami.txt');
+
+    res.json({ ok: true, note: 'Procure whereami.txt via seu cliente FTP e veja em qual pasta ele caiu.' });
+  } catch (e) {
+    res.status(500).json({ error: e?.message });
+  } finally {
+    try { fs.unlinkSync(localTmp); } catch {}
+    if (client) client.close();
+  }
+});
+
 app.get('/debug/whereami', async (req, res) => {
   let client;
   try {
